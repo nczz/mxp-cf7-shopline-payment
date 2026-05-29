@@ -1,0 +1,221 @@
+.wpcf7-shopline-payment {
+	margin: 1em 0;
+	max-width: 100%;
+}
+
+.slp-product-summary {
+	margin-bottom: 8px;
+}
+
+.slp-amount-display {
+	font-size: 1.4em;
+	font-weight: bold;
+	color: #1d2327;
+}
+
+.slp-payment-methods-preview {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 6px;
+	margin-bottom: 12px;
+}
+
+.slp-method {
+	display: inline-block;
+	padding: 2px 8px;
+	background: #f0f0f1;
+	border-radius: 3px;
+	font-size: 0.85em;
+	color: #50575e;
+}
+
+.slp-submit-btn {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: 8px;
+	width: 100%;
+	padding: 12px 24px;
+	font-size: 16px;
+	font-weight: 600;
+	color: #fff;
+	background: #2271b1;
+	border: none;
+	border-radius: 4px;
+	cursor: pointer;
+	transition: opacity 0.2s, background 0.2s;
+}
+
+.slp-submit-btn:hover {
+	background: #135e96;
+}
+
+.slp-submit-btn:disabled,
+.wpcf7-form.submitting .slp-submit-btn {
+	opacity: 0.7;
+	cursor: not-allowed;
+	pointer-events: none;
+}
+
+.wpcf7-form.submitting .slp-btn-text { display: none; }
+.wpcf7-form.submitting .slp-btn-spinner { display: inline-flex !important; align-items: center; gap: 8px; }
+
+.slp-btn-spinner { display: none; align-items: center; gap: 8px; }
+
+/* Spinner 動畫 */
+.slp-spinner-icon {
+	display: inline-block;
+	width: 16px;
+	height: 16px;
+	border: 2px solid rgba(255,255,255,0.3);
+	border-top-color: #fff;
+	border-radius: 50%;
+	animation: slp-spin 0.6s linear infinite;
+}
+
+@keyframes slp-spin {
+	to { transform: rotate(360deg); }
+}
+
+/* Return Page */
+.slp-return-page {
+	max-width: 600px;
+	margin: 2em auto;
+	padding: 20px;
+	text-align: center;
+}
+
+.slp-status { padding: 30px 20px; }
+
+.slp-status .slp-icon {
+	font-size: 48px;
+	margin-bottom: 12px;
+}
+
+.slp-status h2 { margin: 0 0 12px; }
+
+.slp-status-success { color: #155724; }
+.slp-status-success .slp-icon { color: #28a745; }
+
+.slp-status-failed { color: #721c24; }
+.slp-status-failed .slp-icon { color: #dc3545; }
+
+.slp-status-pending { color: #856404; }
+
+.slp-summary {
+	text-align: left;
+	background: #f8f9fa;
+	padding: 16px;
+	border-radius: 8px;
+	margin: 16px 0;
+}
+
+.slp-summary p { margin: 4px 0; }
+
+.slp-email-notice {
+	margin-top: 12px;
+	color: #666;
+	font-size: 0.9em;
+}
+
+.slp-actions {
+	margin-top: 20px;
+}
+
+.slp-retry-btn {
+	display: inline-block;
+	padding: 10px 24px;
+	background: #2271b1;
+	color: #fff;
+	border: none;
+	border-radius: 4px;
+	font-size: 15px;
+	cursor: pointer;
+}
+
+.slp-retry-btn:hover { background: #135e96; }
+.slp-retry-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+.slp-retry-hint {
+	display: block;
+	margin-top: 8px;
+	font-size: 0.85em;
+	color: #666;
+}
+
+.slp-back-link {
+	display: inline-block;
+	margin-top: 12px;
+	color: #2271b1;
+	text-decoration: none;
+}
+
+.slp-back-link:hover { text-decoration: underline; }
+
+.slp-virtual-account {
+	text-align: left;
+	background: #f0f6fc;
+	padding: 16px;
+	border-radius: 8px;
+	margin: 16px 0;
+	word-break: break-all;
+}
+
+.slp-virtual-account h3 { margin: 0 0 8px; font-size: 1em; }
+
+.slp-copy-btn {
+	display: inline-block;
+	margin-left: 8px;
+	padding: 2px 8px;
+	font-size: 12px;
+	background: #e2e3e5;
+	border: none;
+	border-radius: 3px;
+	cursor: pointer;
+}
+
+.slp-copy-btn:hover { background: #d1d3d5; }
+
+/* Loading spinner */
+.slp-loading {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 10px;
+	padding: 40px;
+	color: #666;
+}
+
+.slp-loading::before {
+	content: '';
+	display: inline-block;
+	width: 20px;
+	height: 20px;
+	border: 3px solid #e2e3e5;
+	border-top-color: #2271b1;
+	border-radius: 50%;
+	animation: slp-spin 0.6s linear infinite;
+}
+
+/* Pending spinner */
+.slp-status-pending .slp-icon {
+	display: inline-block;
+	width: 40px;
+	height: 40px;
+	border: 4px solid #e2e3e5;
+	border-top-color: #ffc107;
+	border-radius: 50%;
+	animation: slp-spin 0.8s linear infinite;
+	font-size: 0;
+}
+
+.slp-error-msg {
+	color: #d63638;
+	margin-top: 8px;
+	font-size: 0.9em;
+}
+
+@media (max-width: 480px) {
+	.slp-submit-btn { padding: 14px 20px; }
+	.slp-return-page { padding: 12px; margin: 1em auto; }
+}

@@ -25,7 +25,12 @@ final class MXP_SLP_Request_Builder {
 		string $order_token,
 		string $return_url
 	): array {
-		$settings = get_post_meta( $form_id, '_slp_payment_settings', true ) ?: [];
+		$settings = wp_parse_args( get_post_meta( $form_id, '_slp_payment_settings', true ) ?: [], [
+			'amount'          => 0,
+			'payment_methods' => [ 'CreditCard' ],
+			'cc_installments' => [ '0' ],
+			'simple_mode'     => false,
+		] );
 		$amount_cents = intval( round( ( $settings['amount'] ?? 0 ) * 100 ) );
 		$mapping = self::auto_detect_mapping( $form_id, $posted_data );
 
@@ -56,7 +61,13 @@ final class MXP_SLP_Request_Builder {
 		];
 
 		// 付款方式選項
-		$payment_methods = $settings['payment_methods'] ?? [ 'CreditCard' ];
+		$payment_methods = array_values( array_filter(
+			(array) ( $settings['payment_methods'] ?? [ 'CreditCard' ] ),
+			fn( $method ) => in_array( $method, array_keys( self::PAYMENT_METHOD_LABELS ), true )
+		) );
+		if ( empty( $payment_methods ) ) {
+			$payment_methods = [ 'CreditCard' ];
+		}
 		$payment_options = [];
 
 		if ( in_array( 'CreditCard', $payment_methods, true ) ) {

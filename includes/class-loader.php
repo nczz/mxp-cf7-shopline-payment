@@ -109,11 +109,23 @@ final class MXP_SLP_Loader {
 					return new \WP_REST_Response( [ 'success' => false, 'message' => '無付款交易 ID' ], 400 );
 				}
 
+				$status = get_post_meta( $order_id, '_slp_status', true );
+				if ( 'SUCCEEDED' !== $status ) {
+					return new \WP_REST_Response( [ 'success' => false, 'message' => '只有付款成功的訂單可以退款' ], 400 );
+				}
+
+				$order_amount = (int) get_post_meta( $order_id, '_slp_amount', true );
+				if ( $amount > $order_amount ) {
+					return new \WP_REST_Response( [ 'success' => false, 'message' => '退款金額不可超過訂單金額' ], 400 );
+				}
+
 				$api = MXP_SLP_API::get_instance();
 				$result = $api->create_refund( $trade_id, $amount * 100, $reason );
 
 				if ( $result ) {
 					update_post_meta( $order_id, '_slp_status', 'REFUNDED' );
+					update_post_meta( $order_id, '_slp_refunded_amount', $amount );
+					update_post_meta( $order_id, '_slp_refunded_at', time() );
 					return new \WP_REST_Response( [ 'success' => true ] );
 				}
 
@@ -127,14 +139,24 @@ final class MXP_SLP_Loader {
 			'callback'            => function() {
 				$orders = get_posts( [ 'post_type' => 'slp_order', 'numberposts' => -1, 'orderby' => 'date', 'order' => 'DESC' ] );
 				header( 'Content-Type: text/csv; charset=UTF-8' );
-				header( 'Content-Disposition: attachment; filename="slp-orders-' . date( 'Y-m-d' ) . '.csv"' );
+				header( 'Content-Disposition: attachment; filename="slp-orders-' . gmdate( 'Y-m-d' ) . '.csv"' );
 				$out = fopen( 'php://output', 'w' );
+				if ( false === $out ) {
+					return new \WP_REST_Response( [ 'success' => false, 'message' => '無法建立 CSV 輸出' ], 500 );
+				}
 				fprintf( $out, chr(0xEF) . chr(0xBB) . chr(0xBF) );
 				fputcsv( $out, [ '訂單', '金額', '狀態', '付款方式', 'Email', '日期' ] );
 				foreach ( $orders as $o ) {
 					$posted = get_post_meta( $o->ID, '_slp_posted_data', true );
 					$email = is_array( $posted ) ? ( MXP_SLP_Request_Builder::auto_detect_mapping( 0, $posted )['email'] ?? '' ) : '';
-					fputcsv( $out, [ $o->post_title, get_post_meta($o->ID,'_slp_amount',true), get_post_meta($o->ID,'_slp_status',true), get_post_meta($o->ID,'_slp_payment_method',true), $email, get_the_date('Y-m-d H:i',$o) ] );
+					fputcsv( $out, [
+						$o->post_title,
+						get_post_meta( $o->ID, '_slp_amount', true ),
+						get_post_meta( $o->ID, '_slp_status', true ),
+						get_post_meta( $o->ID, '_slp_payment_method', true ),
+						$email,
+						get_the_date( 'Y-m-d H:i', $o ),
+					] );
 				}
 				fclose( $out );
 				exit;
@@ -164,6 +186,8 @@ final class MXP_SLP_Loader {
 	}
 
 	public function cleanup_expired_orders(): void {
+		global $wpdb;
+
 		$expired = get_posts( [
 			'post_type'   => 'slp_order',
 			'numberposts' => 50,
@@ -177,6 +201,17 @@ final class MXP_SLP_Loader {
 
 		foreach ( $expired as $order ) {
 			update_post_meta( $order->ID, '_slp_status', 'EXPIRED' );
+		}
+
+		$webhook_event_cutoff = time() - ( 90 * DAY_IN_SECONDS );
+		$old_event_keys = $wpdb->get_col( $wpdb->prepare(
+			"SELECT option_name FROM {$wpdb->options} WHERE option_name LIKE %s AND CAST(option_value AS UNSIGNED) < %d LIMIT 500",
+			$wpdb->esc_like( '_slp_evt_' ) . '%',
+			$webhook_event_cutoff
+		) );
+
+		foreach ( $old_event_keys as $old_event_key ) {
+			delete_option( $old_event_key );
 		}
 	}
 

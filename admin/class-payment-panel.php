@@ -156,20 +156,36 @@ final class MXP_SLP_Payment_Panel {
 			return;
 		}
 
-		$input = $_POST['slp_payment'] ?? [];
+		$input = isset( $_POST['slp_payment'] ) && is_array( $_POST['slp_payment'] )
+			? wp_unslash( $_POST['slp_payment'] )
+			: [];
+
+		$payment_methods = array_values( array_filter(
+			(array) ( $input['payment_methods'] ?? [] ),
+			fn( $m ) => in_array( $m, [ 'CreditCard', 'ApplePay', 'LinePay', 'VirtualAccount', 'JKOPay', 'ChaileaseBNPL' ], true )
+		) );
+
+		if ( empty( $payment_methods ) ) {
+			$payment_methods = [ 'CreditCard' ];
+		}
+
+		$cc_installments = array_values( array_filter(
+			(array) ( $input['cc_installments'] ?? [] ),
+			fn( $v ) => in_array( $v, [ '0', '3', '6', '9', '12', '18', '24' ], true )
+		) );
+
+		if ( empty( $cc_installments ) ) {
+			$cc_installments = [ '0' ];
+		}
+
+		$amount = absint( $input['amount'] ?? 0 );
 
 		$settings = [
 			'enabled'         => ! empty( $input['enabled'] ),
-			'amount'          => absint( $input['amount'] ?? 0 ),
+			'amount'          => MXP_SLP_Security::validate_amount( $amount ) ? $amount : 0,
 			'currency'        => 'TWD',
-			'payment_methods' => array_filter(
-				(array) ( $input['payment_methods'] ?? [] ),
-				fn( $m ) => in_array( $m, [ 'CreditCard', 'ApplePay', 'LinePay', 'VirtualAccount', 'JKOPay', 'ChaileaseBNPL' ], true )
-			),
-			'cc_installments' => array_filter(
-				(array) ( $input['cc_installments'] ?? [] ),
-				fn( $v ) => in_array( $v, [ '0', '3', '6', '9', '12', '18', '24' ], true )
-			),
+			'payment_methods' => $payment_methods,
+			'cc_installments' => $cc_installments,
 			'simple_mode'     => ! empty( $input['simple_mode'] ),
 			'button_text'     => sanitize_text_field( $input['button_text'] ?? '' ),
 		];

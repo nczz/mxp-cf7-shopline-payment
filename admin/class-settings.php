@@ -40,13 +40,14 @@ final class MXP_SLP_Settings {
 
 	public function sanitize_settings( array $input ): array {
 		$old = get_option( 'mxp_slp_settings', [] );
+		$environment = in_array( $input['environment'] ?? '', [ 'sandbox', 'production' ], true ) ? $input['environment'] : 'sandbox';
 
 		return [
-			'environment'          => in_array( $input['environment'] ?? '', [ 'sandbox', 'production' ], true ) ? $input['environment'] : 'sandbox',
-			'sandbox_merchant_id'  => sanitize_text_field( $input['sandbox_merchant_id'] ?? '' ),
+			'environment'          => $environment,
+			'sandbox_merchant_id'  => sanitize_text_field( $input['sandbox_merchant_id'] ?? $old['sandbox_merchant_id'] ?? '' ),
 			'sandbox_api_key'      => ! empty( $input['sandbox_api_key'] ) ? MXP_SLP_Security::encrypt( sanitize_text_field( $input['sandbox_api_key'] ) ) : ( $old['sandbox_api_key'] ?? '' ),
 			'sandbox_sign_key'     => ! empty( $input['sandbox_sign_key'] ) ? MXP_SLP_Security::encrypt( sanitize_text_field( $input['sandbox_sign_key'] ) ) : ( $old['sandbox_sign_key'] ?? '' ),
-			'live_merchant_id'     => sanitize_text_field( $input['live_merchant_id'] ?? '' ),
+			'live_merchant_id'     => sanitize_text_field( $input['live_merchant_id'] ?? $old['live_merchant_id'] ?? '' ),
 			'live_api_key'         => ! empty( $input['live_api_key'] ) ? MXP_SLP_Security::encrypt( sanitize_text_field( $input['live_api_key'] ) ) : ( $old['live_api_key'] ?? '' ),
 			'live_sign_key'        => ! empty( $input['live_sign_key'] ) ? MXP_SLP_Security::encrypt( sanitize_text_field( $input['live_sign_key'] ) ) : ( $old['live_sign_key'] ?? '' ),
 			'sandbox_client_key'      => sanitize_text_field( $input['sandbox_client_key'] ?? $old['sandbox_client_key'] ?? '' ),

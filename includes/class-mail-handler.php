@@ -22,6 +22,7 @@ final class MXP_SLP_Mail_Handler {
 		// 二次確認
 		$mail_sent = get_post_meta( $order_id, '_slp_mail_sent', true );
 		if ( $mail_sent ) {
+			delete_post_meta( $order_id, '_slp_mail_lock' );
 			return false;
 		}
 
@@ -29,11 +30,13 @@ final class MXP_SLP_Mail_Handler {
 		$posted_data = get_post_meta( $order_id, '_slp_posted_data', true );
 
 		if ( ! $form_id || ! is_array( $posted_data ) ) {
+			delete_post_meta( $order_id, '_slp_mail_lock' );
 			return false;
 		}
 
 		$contact_form = wpcf7_contact_form( $form_id );
 		if ( ! $contact_form ) {
+			delete_post_meta( $order_id, '_slp_mail_lock' );
 			return false;
 		}
 
@@ -95,7 +98,7 @@ final class MXP_SLP_Mail_Handler {
 		remove_filter( 'wpcf7_special_mail_tags', $special_filter, 20 );
 
 		// Flamingo 整合
-		if ( function_exists( 'Flamingo_Inbound_Message' ) ) {
+		if ( class_exists( 'Flamingo_Inbound_Message' ) ) {
 			$contact_form_obj = wpcf7_contact_form( $form_id );
 			Flamingo_Inbound_Message::add( [
 				'channel' => 'contact-form-7',
@@ -113,6 +116,12 @@ final class MXP_SLP_Mail_Handler {
 
 		// 觸發 action
 		do_action( 'mxp_slp_payment_confirmed', $order_token, $order_id );
+
+		if ( $sent ) {
+			update_post_meta( $order_id, '_slp_mail_sent', time() );
+		} else {
+			delete_post_meta( $order_id, '_slp_mail_lock' );
+		}
 
 		return $sent;
 	}

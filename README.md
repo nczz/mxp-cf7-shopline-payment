@@ -116,6 +116,24 @@ sign = HMAC-SHA256(payload, signKey)
 - [DEVELOPMENT_PLAN.md](DEVELOPMENT_PLAN.md) — 架構設計、開發順序、專家建議
 - [COMPONENT_SPEC.md](COMPONENT_SPEC.md) — 元件規格、介面契約、驗收條件
 
+## 本機品質檢查
+
+在 DDEV 專案根目錄執行：
+
+```bash
+ddev exec 'cd /var/www/html/repo && find . -path ./.git -prune -o -name '\''*.php'\'' -print0 | xargs -0 -n1 php -l'
+ddev exec 'wp --path=/var/www/html/wordpress eval-file /var/www/html/repo/tests/smoke.php'
+ddev exec 'wp --path=/var/www/html/wordpress eval-file /var/www/html/repo/tests/webhook.php'
+ddev exec 'wp --path=/var/www/html/wordpress eval-file /var/www/html/repo/tests/sandbox-session.php'
+ddev exec 'wp --path=/var/www/html/wordpress eval-file /var/www/html/repo/tests/complete-flow.php'
+```
+
+Smoke checks 會驗證核心類別載入、金鑰加解密、token 格式、金額驗證、request builder fallback、訂單建立/查找/狀態轉移等不需外部金鑰的核心行為。
+
+Webhook checks 會用目前設定的 Sign Key 驗證簽章、過期 timestamp、重複事件冪等性、成功與失敗事件狀態轉移。Sandbox session check 會使用目前設定的 Merchant ID/API Key 對 SHOPLINE sandbox 建立並查詢 session。Complete flow check 會執行 CF7 submission、建立真實 sandbox session、建立本機訂單、模擬 signed webhook，並驗證 return page order-status 回應。
+
+正式交付前仍需人工完成 SHOPLINE sandbox 付款頁互動驗證：信用卡成功、信用卡失敗、ATM 等待付款、實際退款與通知信內容。
+
 ## 授權
 
 GPL v2 or later

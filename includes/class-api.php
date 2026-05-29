@@ -67,7 +67,15 @@ final class MXP_SLP_API {
 		return $settings['environment'] ?? 'sandbox';
 	}
 
+	public function has_credentials(): bool {
+		return '' !== $this->get_merchant_id() && '' !== $this->get_api_key();
+	}
+
 	private function request( string $endpoint, array $body = [] ): array|false {
+		if ( ! $this->has_credentials() ) {
+			return false;
+		}
+
 		$url = $this->get_base_url() . $endpoint;
 
 		$response = wp_remote_post( $url, [
@@ -156,6 +164,10 @@ final class MXP_SLP_API {
 	// --- Utility ---
 
 	public function test_connection(): bool {
+		if ( ! $this->has_credentials() ) {
+			return false;
+		}
+
 		$url = $this->get_base_url() . '/api/v1/trade/sessions/query';
 
 		$response = wp_remote_post( $url, [
@@ -175,10 +187,18 @@ final class MXP_SLP_API {
 
 		$code = wp_remote_retrieve_response_code( $response );
 		$body = json_decode( wp_remote_retrieve_body( $response ), true );
+		if ( ! is_array( $body ) ) {
+			return false;
+		}
+
 		$error_code = $body['code'] ?? '';
+
+		if ( 200 === $code ) {
+			return true;
+		}
 
 		// 2005 = Access Denied = 金鑰無效
 		// 其他錯誤碼（1004, 1018 等）= 金鑰有效但查詢參數有誤 = 連線成功
-		return '2005' !== $error_code;
+		return in_array( (string) $error_code, [ '1004', '1018' ], true );
 	}
 }

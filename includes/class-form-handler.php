@@ -16,7 +16,15 @@ function mxp_slp_handle_before_send_mail( $contact_form, &$abort, $submission ):
 	$form_id = $contact_form->id();
 	$settings = get_post_meta( $form_id, '_slp_payment_settings', true ) ?: [];
 
-	if ( empty( $settings['enabled'] ) || empty( $settings['amount'] ) ) {
+	if ( empty( $settings['enabled'] ) ) {
+		return;
+	}
+
+	$amount = absint( $settings['amount'] ?? 0 );
+	if ( ! MXP_SLP_Security::validate_amount( $amount ) ) {
+		$abort = true;
+		$submission->set_status( 'validation_failed' );
+		$submission->set_response( __( '付款金額設定有誤，請聯繫網站管理員', 'mxp-cf7-slp' ) );
 		return;
 	}
 
@@ -58,6 +66,13 @@ function mxp_slp_handle_before_send_mail( $contact_form, &$abort, $submission ):
 
 	// 呼叫 SLP API
 	$api = MXP_SLP_API::get_instance();
+	if ( ! $api->has_credentials() ) {
+		$abort = true;
+		$submission->set_status( 'aborted' );
+		$submission->set_response( __( '付款服務尚未完成設定，請聯繫網站管理員', 'mxp-cf7-slp' ) );
+		return;
+	}
+
 	$result = $api->create_session( $request_body );
 
 	if ( ! $result || empty( $result['sessionId'] ) ) {
@@ -74,12 +89,12 @@ function mxp_slp_handle_before_send_mail( $contact_form, &$abort, $submission ):
 		'reference_id' => $token,
 		'form_id'      => $form_id,
 		'posted_data'  => $posted_data,
-		'amount'       => $settings['amount'],
+		'amount'       => $amount,
 		'currency'     => 'TWD',
 		'status'       => 'CREATED',
 		'mail_sent'    => false,
 		'retry_count'  => 0,
-		'referer_url'  => $submission->get_meta( 'url' ),
+		'referer_url'  => mxp_slp_get_submission_referer_url( $submission ),
 	] );
 
 	// 設定回應
@@ -92,6 +107,26 @@ function mxp_slp_handle_before_send_mail( $contact_form, &$abort, $submission ):
 			'order_token'  => $token,
 		],
 	] );
+}
+
+function mxp_slp_get_submission_referer_url( $submission ): string {
+	$url = (string) $submission->get_meta( 'url' );
+	$rest_base = untrailingslashit( rest_url() );
+	$home = home_url( '/' );
+
+	if ( $url && ! str_starts_with( $url, $rest_base ) && $home !== $url ) {
+		return esc_url_raw( $url );
+	}
+
+	$container_post_id = (int) $submission->get_meta( 'container_post_id' );
+	if ( $container_post_id ) {
+		$permalink = get_permalink( $container_post_id );
+		if ( $permalink ) {
+			return esc_url_raw( $permalink );
+		}
+	}
+
+	return home_url( '/' );
 }
 
 // SDK 模式的 create-payment REST endpoint
@@ -107,7 +142,7 @@ function mxp_slp_handle_create_payment( WP_REST_Request $request ): WP_REST_Resp
 	$token       = sanitize_text_field( $request->get_param( 'order_token' ) );
 	$pay_session = $request->get_param( 'paySession' );
 
-	if ( ! $token || ! $pay_session ) {
+	if ( ! $token || ! MXP_SLP_Security::is_valid_order_token( $token ) || ! $pay_session ) {
 		return new WP_REST_Response( [ 'error' => 'missing_params' ], 400 );
 	}
 
@@ -193,6 +228,10 @@ function mxp_slp_handle_create_payment( WP_REST_Request $request ): WP_REST_Resp
 
 	// 呼叫 SLP Payment API（使用 API 類別的 create_payment 方法）
 	$api = MXP_SLP_API::get_instance();
+	if ( ! $api->has_credentials() ) {
+		return new WP_REST_Response( [ 'error' => 'payment_not_configured' ], 503 );
+	}
+
 	$data = $api->create_payment( $body );
 
 	if ( ! $data || empty( $data['nextAction'] ) ) {

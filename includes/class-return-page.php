@@ -61,6 +61,15 @@ final class MXP_SLP_Return_Page {
 
 	public function handle_order_status( \WP_REST_Request $request ): \WP_REST_Response {
 		$token = $request->get_param( 'token' );
+		if ( ! MXP_SLP_Security::is_valid_order_token( $token ) ) {
+			return new \WP_REST_Response( [ 'error' => 'not_found' ], 404 );
+		}
+
+		$rate_key = ( $_SERVER['REMOTE_ADDR'] ?? '127.0.0.1' ) . ':order-status:' . $token;
+		if ( ! MXP_SLP_Security::check_rate_limit( $rate_key, 30, 60 ) ) {
+			return new \WP_REST_Response( [ 'error' => 'rate_limited' ], 429 );
+		}
+
 		$order_id = MXP_SLP_Order::find_by_token( $token );
 
 		if ( ! $order_id ) {
@@ -73,7 +82,7 @@ final class MXP_SLP_Return_Page {
 		if ( in_array( $status, [ 'CREATED', 'PENDING' ], true ) ) {
 			$session_id = get_post_meta( $order_id, '_slp_session_id', true );
 			$api = MXP_SLP_API::get_instance();
-			$session = $api->query_session( $session_id );
+			$session = $api->has_credentials() ? $api->query_session( $session_id ) : false;
 
 			if ( $session ) {
 				$slp_status = $session['status'] ?? '';
@@ -169,6 +178,15 @@ final class MXP_SLP_Return_Page {
 
 	public function handle_retry( \WP_REST_Request $request ): \WP_REST_Response {
 		$token = $request->get_param( 'token' );
+		if ( ! MXP_SLP_Security::is_valid_order_token( $token ) ) {
+			return new \WP_REST_Response( [ 'error' => 'not_found' ], 404 );
+		}
+
+		$rate_key = ( $_SERVER['REMOTE_ADDR'] ?? '127.0.0.1' ) . ':retry-payment:' . $token;
+		if ( ! MXP_SLP_Security::check_rate_limit( $rate_key, 5, 300 ) ) {
+			return new \WP_REST_Response( [ 'error' => 'rate_limited' ], 429 );
+		}
+
 		$order_id = MXP_SLP_Order::find_by_token( $token );
 
 		if ( ! $order_id ) {
@@ -201,6 +219,10 @@ final class MXP_SLP_Return_Page {
 
 		$request_body = MXP_SLP_Request_Builder::build_session_request( $form_id, $posted_data, $new_token, $return_url );
 		$api = MXP_SLP_API::get_instance();
+		if ( ! $api->has_credentials() ) {
+			return new \WP_REST_Response( [ 'error' => 'payment_not_configured' ], 503 );
+		}
+
 		$result = $api->create_session( $request_body );
 
 		if ( ! $result || empty( $result['sessionId'] ) ) {

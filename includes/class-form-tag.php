@@ -24,7 +24,13 @@ function mxp_slp_form_tag_handler( $tag ): string {
 
 	$amount = $settings['amount'] ?? 0;
 	$button_text = $settings['button_text'] ?? '';
-	$methods = $settings['payment_methods'] ?? [];
+	$methods = array_values( array_filter(
+		(array) ( $settings['payment_methods'] ?? [ 'CreditCard' ] ),
+		fn( $method ) => in_array( $method, [ 'CreditCard', 'ApplePay', 'LinePay', 'VirtualAccount', 'JKOPay', 'ChaileaseBNPL' ], true )
+	) );
+	if ( empty( $methods ) ) {
+		$methods = [ 'CreditCard' ];
+	}
 
 	// 按鈕文字：tag values > 設定 > 預設
 	if ( ! empty( $tag->values[0] ) ) {

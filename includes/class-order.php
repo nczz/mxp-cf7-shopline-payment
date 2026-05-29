@@ -92,6 +92,7 @@ final class MXP_SLP_Order {
 			'PENDING'   => 'background:#fff3cd;color:#856404;',
 			'EXPIRED'   => 'background:#f8d7da;color:#721c24;',
 			'FAILED'    => 'background:#f8d7da;color:#721c24;',
+			'REFUNDED'  => 'background:#cfe2ff;color:#084298;',
 		];
 		$style = $styles[ $status ] ?? 'background:#e2e3e5;color:#383d41;';
 		printf( '<span style="padding:2px 8px;border-radius:3px;font-size:12px;%s">%s</span>', esc_attr( $style ), esc_html( $status ) );
@@ -117,7 +118,7 @@ final class MXP_SLP_Order {
 			return;
 		}
 		$current = $_GET['slp_status'] ?? '';
-		$statuses = [ 'CREATED', 'SUCCEEDED', 'EXPIRED', 'FAILED' ];
+		$statuses = [ 'CREATED', 'SUCCEEDED', 'EXPIRED', 'FAILED', 'REFUNDED' ];
 		echo '<select name="slp_status">';
 		echo '<option value="">' . esc_html__( '所有狀態', 'mxp-cf7-slp' ) . '</option>';
 		foreach ( $statuses as $s ) {
@@ -134,7 +135,7 @@ final class MXP_SLP_Order {
 			return;
 		}
 		$status = $_GET['slp_status'] ?? '';
-		if ( $status && in_array( $status, [ 'CREATED', 'SUCCEEDED', 'EXPIRED', 'FAILED' ], true ) ) {
+		if ( $status && in_array( $status, [ 'CREATED', 'SUCCEEDED', 'EXPIRED', 'FAILED', 'REFUNDED' ], true ) ) {
 			$query->set( 'meta_key', '_slp_status' );
 			$query->set( 'meta_value', $status );
 		}

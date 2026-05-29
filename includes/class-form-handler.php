@@ -15,18 +15,21 @@ function mxp_slp_handle_before_send_mail( $contact_form, &$abort, $submission ):
 
 	$form_id = $contact_form->id();
 	$settings = get_post_meta( $form_id, '_slp_payment_settings', true ) ?: [];
+	$settings = MXP_SLP_Request_Builder::normalize_settings( $settings );
 
 	if ( empty( $settings['enabled'] ) ) {
 		return;
 	}
 
-	$amount = absint( $settings['amount'] ?? 0 );
-	if ( ! MXP_SLP_Security::validate_amount( $amount ) ) {
+	$posted_data = $submission->get_posted_data();
+	$amount_data = MXP_SLP_Request_Builder::resolve_amount( $posted_data, $settings );
+	if ( $amount_data['error'] ) {
 		$abort = true;
 		$submission->set_status( 'validation_failed' );
-		$submission->set_response( __( '付款金額設定有誤，請聯繫網站管理員', 'mxp-cf7-slp' ) );
+		$submission->set_response( $amount_data['error'] );
 		return;
 	}
+	$amount = $amount_data['amount'];
 
 	// Rate limit
 	$ip = $_SERVER['REMOTE_ADDR'] ?? '127.0.0.1';
@@ -38,7 +41,6 @@ function mxp_slp_handle_before_send_mail( $contact_form, &$abort, $submission ):
 	}
 
 	// 欄位驗證
-	$posted_data = $submission->get_posted_data();
 	$validation_error = MXP_SLP_Request_Builder::validate_required_fields( $posted_data, $settings );
 	if ( $validation_error ) {
 		$abort = true;
@@ -61,7 +63,8 @@ function mxp_slp_handle_before_send_mail( $contact_form, &$abort, $submission ):
 		$form_id,
 		$posted_data,
 		$token,
-		$return_url
+		$return_url,
+		$amount
 	);
 
 	// 呼叫 SLP API
@@ -95,6 +98,8 @@ function mxp_slp_handle_before_send_mail( $contact_form, &$abort, $submission ):
 		'mail_sent'    => false,
 		'retry_count'  => 0,
 		'referer_url'  => mxp_slp_get_submission_referer_url( $submission ),
+		'amount_source' => $amount_data['source'],
+		'amount_field' => $amount_data['field'],
 	] );
 
 	// 設定回應
@@ -165,8 +170,11 @@ function mxp_slp_handle_create_payment( WP_REST_Request $request ): WP_REST_Resp
 
 	$form_id     = (int) get_post_meta( $order_id, '_slp_form_id', true );
 	$posted_data = get_post_meta( $order_id, '_slp_posted_data', true );
-	$settings    = get_post_meta( $form_id, '_slp_payment_settings', true ) ?: [];
-	$amount_cents = intval( round( ( $settings['amount'] ?? 0 ) * 100 ) );
+	$amount = (int) get_post_meta( $order_id, '_slp_amount', true );
+	if ( ! MXP_SLP_Security::validate_amount( $amount ) ) {
+		return new WP_REST_Response( [ 'error' => 'invalid_order_amount' ], 400 );
+	}
+	$amount_cents = $amount * 100;
 
 	$mapping = MXP_SLP_Request_Builder::auto_detect_mapping( $form_id, $posted_data );
 	$email = $mapping['email'] ?? '';

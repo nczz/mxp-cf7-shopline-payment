@@ -79,6 +79,7 @@ $assert( is_int( $created_order_id ) && $created_order_id > 0, 'CF7 submission c
 if ( $created_order_id ) {
 	$assert( 'CREATED' === get_post_meta( $created_order_id, '_slp_status', true ), 'created order starts as CREATED' );
 	$assert( '401' === (string) get_post_meta( $created_order_id, '_slp_amount', true ), 'created order stores configured amount' );
+	$assert( 'fixed' === get_post_meta( $created_order_id, '_slp_amount_source', true ), 'created order stores fixed amount source' );
 	$referer_url = get_post_meta( $created_order_id, '_slp_referer_url', true );
 	$assert(
 		home_url( '/payment-test/' ) === $referer_url,

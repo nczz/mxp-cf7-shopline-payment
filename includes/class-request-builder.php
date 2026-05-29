@@ -23,15 +23,12 @@ final class MXP_SLP_Request_Builder {
 		int $form_id,
 		array $posted_data,
 		string $order_token,
-		string $return_url
+		string $return_url,
+		?int $amount_override = null
 	): array {
-		$settings = wp_parse_args( get_post_meta( $form_id, '_slp_payment_settings', true ) ?: [], [
-			'amount'          => 0,
-			'payment_methods' => [ 'CreditCard' ],
-			'cc_installments' => [ '0' ],
-			'simple_mode'     => false,
-		] );
-		$amount_cents = intval( round( ( $settings['amount'] ?? 0 ) * 100 ) );
+		$settings = self::normalize_settings( get_post_meta( $form_id, '_slp_payment_settings', true ) ?: [] );
+		$amount = null !== $amount_override ? $amount_override : self::resolve_amount( $posted_data, $settings )['amount'];
+		$amount_cents = $amount * 100;
 		$mapping = self::auto_detect_mapping( $form_id, $posted_data );
 
 		// 顧客資訊
@@ -138,6 +135,125 @@ final class MXP_SLP_Request_Builder {
 		}
 
 		return $body;
+	}
+
+	public static function normalize_settings( array $settings ): array {
+		$settings = wp_parse_args( $settings, [
+			'amount_mode'       => 'fixed',
+			'amount'            => 0,
+			'amount_min'        => 1,
+			'amount_max'        => 10000000,
+			'amount_field'      => '',
+			'suggested_amounts' => [],
+			'payment_methods'   => [ 'CreditCard' ],
+			'cc_installments'   => [ '0' ],
+			'simple_mode'       => false,
+		] );
+
+		if ( ! in_array( $settings['amount_mode'], [ 'fixed', 'user_input', 'field_mapping' ], true ) ) {
+			$settings['amount_mode'] = 'fixed';
+		}
+
+		$settings['amount'] = absint( $settings['amount'] );
+		$settings['amount_min'] = max( 1, absint( $settings['amount_min'] ) );
+		$settings['amount_max'] = max( $settings['amount_min'], absint( $settings['amount_max'] ) );
+		$settings['amount_field'] = preg_replace( '/[^A-Za-z0-9_-]/', '', (string) $settings['amount_field'] );
+		$suggested_amounts = is_string( $settings['suggested_amounts'] )
+			? preg_split( '/[,\s]+/', $settings['suggested_amounts'] )
+			: (array) $settings['suggested_amounts'];
+		$settings['suggested_amounts'] = array_values( array_unique( array_filter(
+			array_map( 'absint', $suggested_amounts ),
+			fn( $amount ) => $amount >= $settings['amount_min'] && $amount <= $settings['amount_max']
+		) ) );
+
+		if ( empty( $settings['suggested_amounts'] ) ) {
+			$settings['suggested_amounts'] = [
+				$settings['amount_min'],
+				min( $settings['amount_max'], max( $settings['amount_min'], 500 ) ),
+				min( $settings['amount_max'], max( $settings['amount_min'], 1000 ) ),
+			];
+			$settings['suggested_amounts'] = array_values( array_unique( $settings['suggested_amounts'] ) );
+		}
+
+		return $settings;
+	}
+
+	/**
+	 * @return array{amount:int,source:string,field:string,error:string}
+	 */
+	public static function resolve_amount( array $posted_data, array $settings ): array {
+		$settings = self::normalize_settings( $settings );
+		$mode = $settings['amount_mode'];
+		$field = '';
+		$raw_amount = null;
+
+		if ( 'fixed' === $mode ) {
+			$raw_amount = $settings['amount'];
+		} elseif ( 'user_input' === $mode ) {
+			$raw_amount = $posted_data['slp_amount'] ?? ( $posted_data['_slp_amount'] ?? null );
+			$field = 'slp_amount';
+		} else {
+			$field = $settings['amount_field'];
+			$raw_amount = $field ? ( $posted_data[ $field ] ?? null ) : null;
+		}
+
+		$amount = self::parse_twd_amount( $raw_amount );
+		if ( null === $amount ) {
+			return [
+				'amount' => 0,
+				'source' => $mode,
+				'field'  => $field,
+				'error'  => __( '請輸入有效的付款金額', 'mxp-cf7-slp' ),
+			];
+		}
+
+		if ( $amount < $settings['amount_min'] ) {
+			return [
+				'amount' => $amount,
+				'source' => $mode,
+				'field'  => $field,
+				'error'  => sprintf(
+					/* translators: %s: minimum amount */
+					__( '付款金額不可低於 NT$%s', 'mxp-cf7-slp' ),
+					number_format( $settings['amount_min'] )
+				),
+			];
+		}
+
+		if ( $amount > $settings['amount_max'] ) {
+			return [
+				'amount' => $amount,
+				'source' => $mode,
+				'field'  => $field,
+				'error'  => sprintf(
+					/* translators: %s: maximum amount */
+					__( '付款金額不可高於 NT$%s', 'mxp-cf7-slp' ),
+					number_format( $settings['amount_max'] )
+				),
+			];
+		}
+
+		return [
+			'amount' => $amount,
+			'source' => $mode,
+			'field'  => $field,
+			'error'  => '',
+		];
+	}
+
+	private static function parse_twd_amount( mixed $value ): ?int {
+		if ( is_array( $value ) ) {
+			$value = reset( $value );
+		}
+
+		$value = trim( (string) $value );
+		$value = str_replace( [ ',', 'NT$', 'nt$', '$', ' ' ], '', $value );
+
+		if ( '' === $value || ! preg_match( '/^\d+$/', $value ) ) {
+			return null;
+		}
+
+		return absint( $value );
 	}
 
 	public static function auto_detect_mapping( int $form_id, array $posted_data ): array {

@@ -65,7 +65,8 @@ final class MXP_SLP_Payment_Panel {
 	public function render_panel( $contact_form ): void {
 		$form_id = $contact_form->id();
 		$settings = get_post_meta( $form_id, '_slp_payment_settings', true );
-		$settings = wp_parse_args( $settings ?: [], $this->get_defaults() );
+		$settings = MXP_SLP_Request_Builder::normalize_settings( wp_parse_args( $settings ?: [], $this->get_defaults() ) );
+		$suggested_amounts = implode( ', ', $settings['suggested_amounts'] );
 
 		$global = get_option( 'mxp_slp_settings', [] );
 		$has_key = ! empty( $global[ ( $global['environment'] ?? 'sandbox' ) . '_api_key' ] );
@@ -89,8 +90,43 @@ final class MXP_SLP_Payment_Panel {
 					</td>
 				</tr>
 				<tr>
-					<th><?php esc_html_e( '金額（TWD）', 'mxp-cf7-slp' ); ?></th>
+					<th><?php esc_html_e( '金額模式', 'mxp-cf7-slp' ); ?></th>
+					<td>
+						<fieldset class="slp-amount-mode-options">
+							<label><input type="radio" name="slp_payment[amount_mode]" value="fixed" <?php checked( $settings['amount_mode'], 'fixed' ); ?>> <?php esc_html_e( '固定金額', 'mxp-cf7-slp' ); ?></label><br>
+							<label><input type="radio" name="slp_payment[amount_mode]" value="user_input" <?php checked( $settings['amount_mode'], 'user_input' ); ?>> <?php esc_html_e( '顧客自填金額', 'mxp-cf7-slp' ); ?></label><br>
+							<label><input type="radio" name="slp_payment[amount_mode]" value="field_mapping" <?php checked( $settings['amount_mode'], 'field_mapping' ); ?>> <?php esc_html_e( '讀取 CF7 金額欄位', 'mxp-cf7-slp' ); ?></label>
+						</fieldset>
+						<p class="description"><?php esc_html_e( 'SHOPLINE Payments API 使用 TWD 元 x 100；外掛會在送出前自動轉換，後端會重新驗證金額範圍。', 'mxp-cf7-slp' ); ?></p>
+						<p class="description"><?php esc_html_e( '顧客自填與欄位金額會使用導轉式付款；內嵌 SDK 僅適用固定金額，避免前端初始化金額與實際訂單不一致。', 'mxp-cf7-slp' ); ?></p>
+					</td>
+				</tr>
+				<tr class="slp-amount-fixed-row">
+					<th><?php esc_html_e( '固定金額（TWD）', 'mxp-cf7-slp' ); ?></th>
 					<td><input type="number" name="slp_payment[amount]" value="<?php echo esc_attr( $settings['amount'] ); ?>" min="1" step="1" class="small-text"> <span class="description"><?php esc_html_e( '元', 'mxp-cf7-slp' ); ?></span></td>
+				</tr>
+				<tr class="slp-amount-range-row">
+					<th><?php esc_html_e( '可付款金額範圍', 'mxp-cf7-slp' ); ?></th>
+					<td>
+						<input type="number" name="slp_payment[amount_min]" value="<?php echo esc_attr( $settings['amount_min'] ); ?>" min="1" step="1" class="small-text" aria-label="<?php esc_attr_e( '最低付款金額', 'mxp-cf7-slp' ); ?>">
+						<span class="description"><?php esc_html_e( '元 至', 'mxp-cf7-slp' ); ?></span>
+						<input type="number" name="slp_payment[amount_max]" value="<?php echo esc_attr( $settings['amount_max'] ); ?>" min="1" step="1" class="small-text" aria-label="<?php esc_attr_e( '最高付款金額', 'mxp-cf7-slp' ); ?>">
+						<span class="description"><?php esc_html_e( '元', 'mxp-cf7-slp' ); ?></span>
+					</td>
+				</tr>
+				<tr class="slp-amount-field-row">
+					<th><?php esc_html_e( 'CF7 金額欄位名稱', 'mxp-cf7-slp' ); ?></th>
+					<td>
+						<input type="text" name="slp_payment[amount_field]" value="<?php echo esc_attr( $settings['amount_field'] ); ?>" class="regular-text" placeholder="donation-amount">
+						<p class="description"><?php esc_html_e( '請填入表單中的 number/text 欄位 name，例如 donation-amount。後端只接受 TWD 整數。', 'mxp-cf7-slp' ); ?></p>
+					</td>
+				</tr>
+				<tr class="slp-amount-suggested-row">
+					<th><?php esc_html_e( '建議金額', 'mxp-cf7-slp' ); ?></th>
+					<td>
+						<input type="text" name="slp_payment[suggested_amounts]" value="<?php echo esc_attr( $suggested_amounts ); ?>" class="regular-text" placeholder="300, 500, 1000">
+						<p class="description"><?php esc_html_e( '顧客自填金額時顯示為快速選項，請用逗號分隔。超出範圍的金額會自動忽略。', 'mxp-cf7-slp' ); ?></p>
+					</td>
 				</tr>
 				<tr>
 					<th><?php esc_html_e( '付款方式', 'mxp-cf7-slp' ); ?></th>
@@ -144,8 +180,21 @@ final class MXP_SLP_Payment_Panel {
 			var fields = cb ? cb.closest('fieldset').querySelectorAll('tr:not(:first-child)') : [];
 			function toggle() {
 				fields.forEach(function(tr) { tr.style.display = cb.checked ? '' : 'none'; });
+				toggleAmountMode();
+			}
+
+			var modeInputs = document.querySelectorAll('input[name="slp_payment[amount_mode]"]');
+			function toggleAmountMode() {
+				if (cb && !cb.checked) return;
+				var checked = document.querySelector('input[name="slp_payment[amount_mode]"]:checked');
+				var mode = checked ? checked.value : 'fixed';
+				document.querySelectorAll('.slp-amount-fixed-row').forEach(function(row) { row.style.display = mode === 'fixed' ? '' : 'none'; });
+				document.querySelectorAll('.slp-amount-field-row').forEach(function(row) { row.style.display = mode === 'field_mapping' ? '' : 'none'; });
+				document.querySelectorAll('.slp-amount-suggested-row').forEach(function(row) { row.style.display = mode === 'user_input' ? '' : 'none'; });
 			}
 			if (cb) { toggle(); cb.addEventListener('change', toggle); }
+			modeInputs.forEach(function(input) { input.addEventListener('change', toggleAmountMode); });
+			toggleAmountMode();
 		})();
 		</script>
 		<?php
@@ -179,10 +228,22 @@ final class MXP_SLP_Payment_Panel {
 		}
 
 		$amount = absint( $input['amount'] ?? 0 );
+		$amount_min = max( 1, absint( $input['amount_min'] ?? 1 ) );
+		$amount_max = max( $amount_min, absint( $input['amount_max'] ?? 10000000 ) );
+		$amount_mode = in_array( $input['amount_mode'] ?? '', [ 'fixed', 'user_input', 'field_mapping' ], true ) ? $input['amount_mode'] : 'fixed';
+		$suggested_amounts = array_values( array_unique( array_filter(
+			array_map( 'absint', preg_split( '/[,\s]+/', (string) ( $input['suggested_amounts'] ?? '' ) ) ),
+			fn( $value ) => $value >= $amount_min && $value <= $amount_max
+		) ) );
 
 		$settings = [
 			'enabled'         => ! empty( $input['enabled'] ),
+			'amount_mode'     => $amount_mode,
 			'amount'          => MXP_SLP_Security::validate_amount( $amount ) ? $amount : 0,
+			'amount_min'      => $amount_min,
+			'amount_max'      => $amount_max,
+			'amount_field'    => preg_replace( '/[^A-Za-z0-9_-]/', '', (string) ( $input['amount_field'] ?? '' ) ),
+			'suggested_amounts' => $suggested_amounts,
 			'currency'        => 'TWD',
 			'payment_methods' => $payment_methods,
 			'cc_installments' => $cc_installments,
@@ -196,7 +257,12 @@ final class MXP_SLP_Payment_Panel {
 	private function get_defaults(): array {
 		return [
 			'enabled'         => false,
+			'amount_mode'     => 'fixed',
 			'amount'          => 0,
+			'amount_min'      => 1,
+			'amount_max'      => 10000000,
+			'amount_field'    => '',
+			'suggested_amounts' => [ 300, 500, 1000 ],
 			'currency'        => 'TWD',
 			'payment_methods' => [ 'CreditCard' ],
 			'cc_installments' => [ '0' ],

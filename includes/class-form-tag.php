@@ -20,7 +20,7 @@ function mxp_slp_register_form_tag(): void {
 function mxp_slp_form_tag_handler( $tag ): string {
 	$contact_form = WPCF7_ContactForm::get_current();
 	$form_id = $contact_form ? $contact_form->id() : 0;
-	$settings = get_post_meta( $form_id, '_slp_payment_settings', true ) ?: [];
+	$settings = MXP_SLP_Request_Builder::normalize_settings( get_post_meta( $form_id, '_slp_payment_settings', true ) ?: [] );
 
 	$amount = $settings['amount'] ?? 0;
 	$button_text = $settings['button_text'] ?? '';
@@ -36,6 +36,9 @@ function mxp_slp_form_tag_handler( $tag ): string {
 	if ( ! empty( $tag->values[0] ) ) {
 		$button_text = trim( $tag->values[0] );
 	}
+	if ( 'fixed' !== $settings['amount_mode'] && preg_match( '/NT\\$|元/', $button_text ) ) {
+		$button_text = '';
+	}
 	if ( '' === $button_text ) {
 		$button_text = __( '前往付款', 'mxp-cf7-slp' );
 	}
@@ -46,12 +49,24 @@ function mxp_slp_form_tag_handler( $tag ): string {
 		$methods
 	);
 
-	$amount_display = $amount > 0 ? 'NT$' . number_format( $amount ) : '';
+	$amount_display = '';
+	if ( 'fixed' === $settings['amount_mode'] && $amount > 0 ) {
+		$amount_display = 'NT$' . number_format( $amount );
+	} elseif ( 'user_input' === $settings['amount_mode'] ) {
+		$amount_display = sprintf(
+			/* translators: 1: minimum amount, 2: maximum amount */
+			__( '請輸入 NT$%1$s - NT$%2$s', 'mxp-cf7-slp' ),
+			number_format( $settings['amount_min'] ),
+			number_format( $settings['amount_max'] )
+		);
+	} elseif ( 'field_mapping' === $settings['amount_mode'] ) {
+		$amount_display = __( '付款金額將依表單內容計算', 'mxp-cf7-slp' );
+	}
 
-	$has_sdk_methods = array_intersect( $methods, [ 'CreditCard', 'ApplePay' ] );
+	$has_sdk_methods = 'fixed' === $settings['amount_mode'] ? array_intersect( $methods, [ 'CreditCard', 'ApplePay' ] ) : [];
 	$mode = $has_sdk_methods ? 'hybrid' : 'redirect';
 
-	$html = '<div class="wpcf7-shopline-payment" data-mode="' . esc_attr( $mode ) . '" data-form-id="' . esc_attr( $form_id ) . '">';
+	$html = '<div class="wpcf7-shopline-payment" data-mode="' . esc_attr( $mode ) . '" data-form-id="' . esc_attr( $form_id ) . '" data-amount-mode="' . esc_attr( $settings['amount_mode'] ) . '" data-amount-min="' . esc_attr( $settings['amount_min'] ) . '" data-amount-max="' . esc_attr( $settings['amount_max'] ) . '">';
 
 	// SDK 容器（僅 hybrid 模式）
 	if ( $has_sdk_methods ) {
@@ -63,6 +78,32 @@ function mxp_slp_form_tag_handler( $tag ): string {
 			'<div class="slp-product-summary"><span class="slp-amount-display">%s</span></div>',
 			esc_html( $amount_display )
 		);
+	}
+
+	if ( 'user_input' === $settings['amount_mode'] ) {
+		$html .= '<div class="slp-custom-amount">';
+		$html .= '<label class="slp-custom-amount-label" for="slp-amount-' . esc_attr( $form_id ) . '">' . esc_html__( '付款金額', 'mxp-cf7-slp' ) . '</label>';
+		$html .= '<div class="slp-custom-amount-control"><span class="slp-currency-prefix">NT$</span><input id="slp-amount-' . esc_attr( $form_id ) . '" type="number" inputmode="numeric" pattern="[0-9]*" name="slp_amount" min="' . esc_attr( $settings['amount_min'] ) . '" max="' . esc_attr( $settings['amount_max'] ) . '" step="1" placeholder="' . esc_attr( number_format( $settings['amount_min'] ) ) . '" autocomplete="off" required></div>';
+		if ( ! empty( $settings['suggested_amounts'] ) ) {
+			$html .= '<div class="slp-suggested-amounts" aria-label="' . esc_attr__( '建議金額', 'mxp-cf7-slp' ) . '">';
+			foreach ( $settings['suggested_amounts'] as $suggested_amount ) {
+				$html .= '<button type="button" class="slp-suggested-amount" data-amount="' . esc_attr( $suggested_amount ) . '" aria-pressed="false">NT$' . esc_html( number_format( $suggested_amount ) ) . '</button>';
+			}
+			$html .= '</div>';
+		}
+		$html .= '<p class="slp-amount-help">' . esc_html( sprintf(
+			/* translators: 1: minimum amount, 2: maximum amount */
+			__( '可付款金額：NT$%1$s - NT$%2$s', 'mxp-cf7-slp' ),
+			number_format( $settings['amount_min'] ),
+			number_format( $settings['amount_max'] )
+		) ) . '</p>';
+		$html .= '</div>';
+	} elseif ( 'field_mapping' === $settings['amount_mode'] && $settings['amount_field'] ) {
+		$html .= '<p class="slp-amount-help">' . esc_html( sprintf(
+			/* translators: %s: CF7 field name */
+			__( '付款金額取自欄位：%s', 'mxp-cf7-slp' ),
+			$settings['amount_field']
+		) ) . '</p>';
 	}
 
 	$html .= sprintf(

@@ -217,7 +217,12 @@ final class MXP_SLP_Return_Page {
 			? add_query_arg( 'token', $new_token, get_permalink( $return_page ) )
 			: home_url( '/?slp_return=1&token=' . $new_token );
 
-		$request_body = MXP_SLP_Request_Builder::build_session_request( $form_id, $posted_data, $new_token, $return_url );
+		$amount = (int) get_post_meta( $order_id, '_slp_amount', true );
+		if ( ! MXP_SLP_Security::validate_amount( $amount ) ) {
+			return new \WP_REST_Response( [ 'error' => 'invalid_order_amount' ], 400 );
+		}
+
+		$request_body = MXP_SLP_Request_Builder::build_session_request( $form_id, $posted_data, $new_token, $return_url, $amount );
 		$api = MXP_SLP_API::get_instance();
 		if ( ! $api->has_credentials() ) {
 			return new \WP_REST_Response( [ 'error' => 'payment_not_configured' ], 503 );
@@ -236,12 +241,14 @@ final class MXP_SLP_Return_Page {
 			'reference_id' => $new_token,
 			'form_id'      => $form_id,
 			'posted_data'  => $posted_data,
-			'amount'       => (int) get_post_meta( $order_id, '_slp_amount', true ),
+			'amount'       => $amount,
 			'currency'     => 'TWD',
 			'status'       => 'CREATED',
 			'mail_sent'    => false,
 			'retry_count'  => 0,
 			'referer_url'  => get_post_meta( $order_id, '_slp_referer_url', true ),
+			'amount_source' => get_post_meta( $order_id, '_slp_amount_source', true ),
+			'amount_field' => get_post_meta( $order_id, '_slp_amount_field', true ),
 		] );
 
 		// 更新原訂單重試次數

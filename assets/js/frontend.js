@@ -12,6 +12,7 @@
 			form.querySelectorAll('.wpcf7-submit:not(.slp-submit-btn)').forEach(function(btn) {
 				btn.style.display = 'none';
 			});
+			initAmountWidget(widget);
 		});
 
 		// 檢查是否有未完成的付款（上一頁回來的情況）
@@ -72,6 +73,47 @@
 	function getReturnUrl(token) {
 		// 從頁面中找 return page URL 或用預設路徑
 		return window.location.origin + '/slp-payment-return/?token=' + encodeURIComponent(token);
+	}
+
+	function initAmountWidget(widget) {
+		var input = widget.querySelector('input[name="slp_amount"]');
+		if (!input) return;
+
+		var display = widget.querySelector('.slp-amount-display');
+		var min = parseInt(widget.dataset.amountMin, 10) || 1;
+		var max = parseInt(widget.dataset.amountMax, 10) || 10000000;
+
+		function format(n) {
+			return 'NT$' + String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+		}
+
+		function refresh() {
+			var value = parseInt(input.value, 10);
+			if (display) {
+				display.textContent = value ? format(value) : '請輸入 ' + format(min) + ' - ' + format(max);
+			}
+			if (input.value && (value < min || value > max)) {
+				input.setCustomValidity('付款金額需介於 ' + format(min) + ' 到 ' + format(max));
+			} else {
+				input.setCustomValidity('');
+			}
+			widget.querySelectorAll('.slp-suggested-amount').forEach(function(button) {
+				var selected = input.value === button.dataset.amount;
+				button.classList.toggle('is-selected', selected);
+				button.setAttribute('aria-pressed', selected ? 'true' : 'false');
+			});
+		}
+
+		widget.querySelectorAll('.slp-suggested-amount').forEach(function(button) {
+			button.addEventListener('click', function() {
+				input.value = this.dataset.amount || '';
+				input.dispatchEvent(new Event('input', { bubbles: true }));
+				input.focus();
+			});
+		});
+
+		input.addEventListener('input', refresh);
+		refresh();
 	}
 
 	// 表單提交處理

@@ -186,6 +186,8 @@ final class MXP_SLP_Order {
 		$session  = get_post_meta( $order_id, '_slp_session_id', true );
 		$posted   = get_post_meta( $order_id, '_slp_posted_data', true );
 		$error    = get_post_meta( $order_id, '_slp_error_msg', true );
+		$amount_source = get_post_meta( $order_id, '_slp_amount_source', true );
+		$amount_field  = get_post_meta( $order_id, '_slp_amount_field', true );
 		?>
 		<style>.slp-detail-table td,.slp-detail-table th{padding:6px 12px;border-bottom:1px solid #eee;}.slp-detail-table th{text-align:left;width:120px;color:#666;}</style>
 
@@ -193,6 +195,7 @@ final class MXP_SLP_Order {
 		<table class="slp-detail-table">
 			<tr><th><?php esc_html_e( '狀態', 'mxp-cf7-slp' ); ?></th><td><?php $this->render_status_badge( $order_id ); ?></td></tr>
 			<tr><th><?php esc_html_e( '金額', 'mxp-cf7-slp' ); ?></th><td>NT$ <?php echo esc_html( number_format( $amount ) ); ?></td></tr>
+			<tr><th><?php esc_html_e( '金額來源', 'mxp-cf7-slp' ); ?></th><td><?php echo esc_html( $this->get_amount_source_label( $amount_source ) ); ?><?php echo $amount_field ? ' <code>' . esc_html( $amount_field ) . '</code>' : ''; ?></td></tr>
 			<tr><th><?php esc_html_e( '付款方式', 'mxp-cf7-slp' ); ?></th><td><?php echo esc_html( MXP_SLP_Request_Builder::get_method_label( $method ?: '-' ) ); ?></td></tr>
 			<tr><th>Session ID</th><td><code><?php echo esc_html( $session ); ?></code></td></tr>
 			<?php if ( $trade_id ) : ?>
@@ -263,6 +266,14 @@ final class MXP_SLP_Order {
 
 	// --- Static methods (unchanged from Phase 1) ---
 
+	private function get_amount_source_label( string $source ): string {
+		return match ( $source ) {
+			'user_input'    => __( '顧客自填', 'mxp-cf7-slp' ),
+			'field_mapping' => __( '表單欄位', 'mxp-cf7-slp' ),
+			default         => __( '固定金額', 'mxp-cf7-slp' ),
+		};
+	}
+
 	public static function create( array $data ): int|false {
 		global $wpdb;
 
@@ -286,6 +297,7 @@ final class MXP_SLP_Order {
 			'_slp_currency', '_slp_status', '_slp_payment_method',
 			'_slp_trade_order_id', '_slp_mail_sent', '_slp_retry_count',
 			'_slp_referer_url', '_slp_error_code', '_slp_error_msg',
+			'_slp_amount_source', '_slp_amount_field',
 		];
 
 		foreach ( $meta_fields as $key ) {

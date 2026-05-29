@@ -35,6 +35,36 @@ $assert( MXP_SLP_Security::validate_amount( 1 ), 'minimum positive amount is val
 $assert( ! MXP_SLP_Security::validate_amount( 0 ), 'zero amount is invalid' );
 $assert( MXP_SLP_Security::check_rate_limit( 'smoke-' . wp_generate_uuid4(), 1, 60 ), 'rate limiter allows first hit' );
 
+$fixed_amount = MXP_SLP_Request_Builder::resolve_amount( [], [
+	'amount_mode' => 'fixed',
+	'amount'      => 401,
+	'amount_min'  => 1,
+	'amount_max'  => 1000,
+] );
+$assert( 401 === $fixed_amount['amount'] && '' === $fixed_amount['error'], 'fixed amount resolves within range' );
+
+$user_amount = MXP_SLP_Request_Builder::resolve_amount( [ 'slp_amount' => '1,200' ], [
+	'amount_mode' => 'user_input',
+	'amount_min'  => 100,
+	'amount_max'  => 2000,
+] );
+$assert( 1200 === $user_amount['amount'] && 'user_input' === $user_amount['source'], 'user-input amount resolves with comma formatting' );
+
+$field_amount = MXP_SLP_Request_Builder::resolve_amount( [ 'donation-amount' => '300' ], [
+	'amount_mode'  => 'field_mapping',
+	'amount_field' => 'donation-amount',
+	'amount_min'   => 100,
+	'amount_max'   => 500,
+] );
+$assert( 300 === $field_amount['amount'] && 'donation-amount' === $field_amount['field'], 'field-mapped amount resolves from configured CF7 field' );
+
+$low_amount = MXP_SLP_Request_Builder::resolve_amount( [ 'slp_amount' => '99' ], [
+	'amount_mode' => 'user_input',
+	'amount_min'  => 100,
+	'amount_max'  => 2000,
+] );
+$assert( '' !== $low_amount['error'], 'amount below minimum fails validation' );
+
 $api = MXP_SLP_API::get_instance();
 $assert( is_bool( $api->has_credentials() ), 'credential readiness check returns a boolean' );
 

@@ -19,6 +19,22 @@ final class MXP_SLP_Payment_Panel {
 		add_filter( 'wpcf7_editor_panels', [ $this, 'add_panel' ] );
 		add_action( 'wpcf7_save_contact_form', [ $this, 'save_settings' ], 10, 3 );
 		add_action( 'wpcf7_admin_init', [ $this, 'register_tag_generator' ], 60 );
+		add_action( 'admin_enqueue_scripts', [ $this, 'enqueue_admin_assets' ] );
+	}
+
+	public function enqueue_admin_assets(): void {
+		$screen = get_current_screen();
+		if ( ! $screen || false === strpos( (string) $screen->id, 'wpcf7' ) ) {
+			return;
+		}
+
+		wp_enqueue_script(
+			'mxp-cf7-slp-admin-payment-panel',
+			MXP_SLP_PLUGIN_URL . '/assets/js/admin-payment-panel.js',
+			[],
+			MXP_SLP_VERSION,
+			true
+		);
 	}
 
 	public function register_tag_generator(): void {
@@ -174,29 +190,6 @@ final class MXP_SLP_Payment_Panel {
 			</table>
 		</fieldset>
 
-		<script>
-		(function(){
-			var cb = document.querySelector('input[name="slp_payment[enabled]"]');
-			var fields = cb ? cb.closest('fieldset').querySelectorAll('tr:not(:first-child)') : [];
-			function toggle() {
-				fields.forEach(function(tr) { tr.style.display = cb.checked ? '' : 'none'; });
-				toggleAmountMode();
-			}
-
-			var modeInputs = document.querySelectorAll('input[name="slp_payment[amount_mode]"]');
-			function toggleAmountMode() {
-				if (cb && !cb.checked) return;
-				var checked = document.querySelector('input[name="slp_payment[amount_mode]"]:checked');
-				var mode = checked ? checked.value : 'fixed';
-				document.querySelectorAll('.slp-amount-fixed-row').forEach(function(row) { row.style.display = mode === 'fixed' ? '' : 'none'; });
-				document.querySelectorAll('.slp-amount-field-row').forEach(function(row) { row.style.display = mode === 'field_mapping' ? '' : 'none'; });
-				document.querySelectorAll('.slp-amount-suggested-row').forEach(function(row) { row.style.display = mode === 'user_input' ? '' : 'none'; });
-			}
-			if (cb) { toggle(); cb.addEventListener('change', toggle); }
-			modeInputs.forEach(function(input) { input.addEventListener('change', toggleAmountMode); });
-			toggleAmountMode();
-		})();
-		</script>
 		<?php
 	}
 

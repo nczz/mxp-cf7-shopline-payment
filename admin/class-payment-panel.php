@@ -173,7 +173,7 @@ final class MXP_SLP_Payment_Panel {
 						foreach ( $installments as $value => $label ) :
 						?>
 							<label style="display:inline-block;margin-right:8px;">
-								<input type="checkbox" name="slp_payment[cc_installments][]" value="<?php echo esc_attr( $value ); ?>" <?php checked( in_array( $value, $settings['cc_installments'], true ) ); ?>>
+								<input type="checkbox" name="slp_payment[cc_installments][]" value="<?php echo esc_attr( $value ); ?>" <?php checked( in_array( (string) $value, $settings['cc_installments'], true ) ); ?>>
 								<?php echo esc_html( $label ); ?>
 							</label>
 						<?php endforeach; ?>
@@ -211,10 +211,10 @@ final class MXP_SLP_Payment_Panel {
 			$payment_methods = [ 'CreditCard' ];
 		}
 
-		$cc_installments = array_values( array_filter(
-			(array) ( $input['cc_installments'] ?? [] ),
+		$cc_installments = array_values( array_unique( array_filter(
+			array_map( 'strval', (array) ( $input['cc_installments'] ?? [] ) ),
 			fn( $v ) => in_array( $v, [ '0', '3', '6', '9', '12', '18', '24' ], true )
-		) );
+		) ) );
 
 		if ( empty( $cc_installments ) ) {
 			$cc_installments = [ '0' ];

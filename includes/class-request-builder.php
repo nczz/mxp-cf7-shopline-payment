@@ -158,6 +158,13 @@ final class MXP_SLP_Request_Builder {
 		$settings['amount_min'] = max( 1, absint( $settings['amount_min'] ) );
 		$settings['amount_max'] = max( $settings['amount_min'], absint( $settings['amount_max'] ) );
 		$settings['amount_field'] = preg_replace( '/[^A-Za-z0-9_-]/', '', (string) $settings['amount_field'] );
+		$settings['cc_installments'] = array_values( array_unique( array_filter(
+			array_map( 'strval', (array) $settings['cc_installments'] ),
+			fn( $installment ) => in_array( $installment, [ '0', '3', '6', '9', '12', '18', '24' ], true )
+		) ) );
+		if ( empty( $settings['cc_installments'] ) ) {
+			$settings['cc_installments'] = [ '0' ];
+		}
 		$suggested_amounts = is_string( $settings['suggested_amounts'] )
 			? preg_split( '/[,\s]+/', $settings['suggested_amounts'] )
 			: (array) $settings['suggested_amounts'];

@@ -3,7 +3,7 @@
  * Plugin Name: MXP CF7 Shopline Payment
  * Plugin URI: https://github.com/nczz/mxp-cf7-shopline-payment
  * Description: 讓 Contact Form 7 表單具備 SHOPLINE Payments 收款能力，支援信用卡、LINE Pay、街口支付、ATM 轉帳、Apple Pay、中租零卡分期。
- * Version: 1.1.2
+ * Version: 1.1.3
  * Requires at least: 6.4
  * Requires PHP: 8.0
  * Requires Plugins: contact-form-7
@@ -19,7 +19,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'MXP_SLP_VERSION', '1.1.2' );
+define( 'MXP_SLP_VERSION', '1.1.3' );
 define( 'MXP_SLP_PLUGIN_FILE', __FILE__ );
 define( 'MXP_SLP_PLUGIN_DIR', __DIR__ );
 define( 'MXP_SLP_PLUGIN_URL', plugins_url( '', __FILE__ ) );

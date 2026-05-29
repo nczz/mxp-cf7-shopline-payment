@@ -95,6 +95,41 @@ if ( $form ) {
 	$assert( false !== strpos( $payment_tag_html, 'data-cc-installments="[&quot;0&quot;,&quot;3&quot;,&quot;6&quot;]"' ), 'fixed amount SDK widget exposes credit-card installments' );
 }
 
+$normalized_installments = MXP_SLP_Request_Builder::normalize_settings( [
+	'cc_installments' => [ 3, '6', 'invalid', '6' ],
+] );
+$assert( [ '3', '6' ] === $normalized_installments['cc_installments'], 'credit-card installments normalize to unique strings' );
+
+require_once WP_PLUGIN_DIR . '/mxp-cf7-shopline-payment/admin/class-payment-panel.php';
+$form = wpcf7_contact_form( 5 );
+if ( $form ) {
+	$original_settings = get_post_meta( 5, '_slp_payment_settings', true );
+	update_post_meta( 5, '_slp_payment_settings', [
+		'enabled'           => true,
+		'amount_mode'       => 'fixed',
+		'amount'            => 401,
+		'amount_min'        => 1,
+		'amount_max'        => 10000000,
+		'amount_field'      => '',
+		'suggested_amounts' => [],
+		'currency'          => 'TWD',
+		'payment_methods'   => [ 'CreditCard' ],
+		'cc_installments'   => [ '3', '6' ],
+		'simple_mode'       => true,
+		'button_text'       => '',
+	] );
+	ob_start();
+	MXP_SLP_Payment_Panel::get_instance()->render_panel( $form );
+	$payment_panel_html = ob_get_clean();
+	if ( false === $original_settings || '' === $original_settings ) {
+		delete_post_meta( 5, '_slp_payment_settings' );
+	} else {
+		update_post_meta( 5, '_slp_payment_settings', $original_settings );
+	}
+	$assert( false !== strpos( $payment_panel_html, 'value="3"  checked' ), 'payment panel restores checked 3-installment option' );
+	$assert( false !== strpos( $payment_panel_html, 'value="6"  checked' ), 'payment panel restores checked 6-installment option' );
+}
+
 $api = MXP_SLP_API::get_instance();
 $assert( is_bool( $api->has_credentials() ), 'credential readiness check returns a boolean' );
 

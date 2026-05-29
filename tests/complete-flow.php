@@ -13,6 +13,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 $failures = [];
 $created_order_id = null;
 $event_id = null;
+$form_id = 5;
+$original_settings = get_post_meta( $form_id, '_slp_payment_settings', true );
 
 $assert = static function( bool $condition, string $message ) use ( &$failures ): void {
 	if ( ! $condition ) {
@@ -20,13 +22,19 @@ $assert = static function( bool $condition, string $message ) use ( &$failures )
 	}
 };
 
-$cleanup = static function() use ( &$created_order_id, &$event_id ): void {
+$cleanup = static function() use ( &$created_order_id, &$event_id, $form_id, $original_settings ): void {
 	if ( $created_order_id ) {
 		wp_delete_post( $created_order_id, true );
 	}
 
 	if ( $event_id ) {
 		delete_option( '_slp_evt_' . substr( md5( $event_id ), 0, 16 ) );
+	}
+
+	if ( false === $original_settings || '' === $original_settings ) {
+		delete_post_meta( $form_id, '_slp_payment_settings' );
+	} else {
+		update_post_meta( $form_id, '_slp_payment_settings', $original_settings );
 	}
 };
 
@@ -39,10 +47,25 @@ if ( '' === $api->get_sign_key() ) {
 	WP_CLI::error( 'Complete flow test requires configured SHOPLINE Sign Key.' );
 }
 
-$form = wpcf7_contact_form( 5 );
+$form = wpcf7_contact_form( $form_id );
 if ( ! $form ) {
 	WP_CLI::error( 'Complete flow test requires CF7 form ID 5.' );
 }
+
+update_post_meta( $form_id, '_slp_payment_settings', [
+	'enabled'           => true,
+	'amount_mode'       => 'fixed',
+	'amount'            => 401,
+	'amount_min'        => 1,
+	'amount_max'        => 10000000,
+	'amount_field'      => '',
+	'suggested_amounts' => [ 300, 500, 1000 ],
+	'currency'          => 'TWD',
+	'payment_methods'   => [ 'CreditCard', 'LinePay' ],
+	'cc_installments'   => [ '0' ],
+	'simple_mode'       => true,
+	'button_text'       => '',
+] );
 
 $_POST = [
 	'your-name'             => '王小明',

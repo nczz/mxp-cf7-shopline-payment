@@ -215,15 +215,22 @@
 		}
 
 		container.style.display = 'block';
-		ShoplinePayments({
+		var sdkConfig = {
 			clientKey: settings.clientKey,
 			merchantId: settings.merchantId,
 			paymentMethod: 'CreditCard',
 			currency: 'TWD',
-			amount: parseInt(settings.amount) || 10000,
+			amount: parseInt(widget.dataset.sdkAmount, 10) || 10000,
 			element: '#' + container.id,
 			env: settings.env || 'sandbox',
-		}).then(function(result) {
+		};
+
+		var installmentCounts = parseInstallmentCounts(widget.dataset.ccInstallments);
+		if (installmentCounts.length > 1 || (installmentCounts.length === 1 && installmentCounts[0] !== '0')) {
+			sdkConfig.installmentCounts = installmentCounts;
+		}
+
+		ShoplinePayments(sdkConfig).then(function(result) {
 			if (result.error) {
 				widget.dataset.mode = 'redirect';
 				container.style.display = 'none';
@@ -231,6 +238,20 @@
 			}
 			sdkInstances[formId] = result.payment;
 		});
+	}
+
+	function parseInstallmentCounts(raw) {
+		var allowed = ['0', '3', '6', '9', '12', '18', '24'];
+		if (!raw) return [];
+		try {
+			return JSON.parse(raw).map(function(value) {
+				return String(value);
+			}).filter(function(value, index, values) {
+				return allowed.indexOf(value) !== -1 && values.indexOf(value) === index;
+			});
+		} catch (e) {
+			return [];
+		}
 	}
 
 	function handleEmbeddedPayment(payment, orderToken, form) {

@@ -65,8 +65,12 @@ function mxp_slp_form_tag_handler( $tag ): string {
 
 	$has_sdk_methods = 'fixed' === $settings['amount_mode'] ? array_intersect( $methods, [ 'CreditCard', 'ApplePay' ] ) : [];
 	$mode = $has_sdk_methods ? 'hybrid' : 'redirect';
+	$sdk_installments = array_values( array_filter(
+		(array) $settings['cc_installments'],
+		fn( $installment ) => preg_match( '/^(0|3|6|9|12|18|24)$/', (string) $installment )
+	) );
 
-	$html = '<div class="wpcf7-shopline-payment" data-mode="' . esc_attr( $mode ) . '" data-form-id="' . esc_attr( $form_id ) . '" data-amount-mode="' . esc_attr( $settings['amount_mode'] ) . '" data-amount-min="' . esc_attr( $settings['amount_min'] ) . '" data-amount-max="' . esc_attr( $settings['amount_max'] ) . '">';
+	$html = '<div class="wpcf7-shopline-payment" data-mode="' . esc_attr( $mode ) . '" data-form-id="' . esc_attr( $form_id ) . '" data-amount-mode="' . esc_attr( $settings['amount_mode'] ) . '" data-amount-min="' . esc_attr( $settings['amount_min'] ) . '" data-amount-max="' . esc_attr( $settings['amount_max'] ) . '" data-sdk-amount="' . esc_attr( $amount * 100 ) . '" data-cc-installments="' . esc_attr( wp_json_encode( $sdk_installments ) ) . '">';
 
 	// SDK 容器（僅 hybrid 模式）
 	if ( $has_sdk_methods ) {

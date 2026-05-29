@@ -65,6 +65,36 @@ $low_amount = MXP_SLP_Request_Builder::resolve_amount( [ 'slp_amount' => '99' ],
 ] );
 $assert( '' !== $low_amount['error'], 'amount below minimum fails validation' );
 
+$form = wpcf7_contact_form( 5 );
+if ( $form ) {
+	$original_settings = get_post_meta( 5, '_slp_payment_settings', true );
+	update_post_meta( 5, '_slp_payment_settings', [
+		'enabled'           => true,
+		'amount_mode'       => 'fixed',
+		'amount'            => 401,
+		'amount_min'        => 1,
+		'amount_max'        => 10000000,
+		'amount_field'      => '',
+		'suggested_amounts' => [],
+		'currency'          => 'TWD',
+		'payment_methods'   => [ 'CreditCard' ],
+		'cc_installments'   => [ '0', '3', '6' ],
+		'simple_mode'       => true,
+		'button_text'       => '',
+	] );
+	$GLOBALS['wpcf7_contact_form'] = $form;
+	$tag = new WPCF7_FormTag( [ 'type' => 'shopline_payment', 'name' => 'shopline_payment', 'raw_values' => [], 'values' => [] ] );
+	$payment_tag_html = mxp_slp_form_tag_handler( $tag );
+	unset( $GLOBALS['wpcf7_contact_form'] );
+	if ( false === $original_settings || '' === $original_settings ) {
+		delete_post_meta( 5, '_slp_payment_settings' );
+	} else {
+		update_post_meta( 5, '_slp_payment_settings', $original_settings );
+	}
+	$assert( false !== strpos( $payment_tag_html, 'data-sdk-amount="40100"' ), 'fixed amount SDK widget exposes amount in cents' );
+	$assert( false !== strpos( $payment_tag_html, 'data-cc-installments="[&quot;0&quot;,&quot;3&quot;,&quot;6&quot;]"' ), 'fixed amount SDK widget exposes credit-card installments' );
+}
+
 $api = MXP_SLP_API::get_instance();
 $assert( is_bool( $api->has_credentials() ), 'credential readiness check returns a boolean' );
 

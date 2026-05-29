@@ -15,9 +15,26 @@ if ( ! $api->has_credentials() ) {
 	WP_CLI::error( 'Sandbox session test requires configured SHOPLINE Merchant ID and API Key.' );
 }
 
+$form_id = 5;
+$original_settings = get_post_meta( $form_id, '_slp_payment_settings', true );
+update_post_meta( $form_id, '_slp_payment_settings', [
+	'enabled'           => true,
+	'amount_mode'       => 'fixed',
+	'amount'            => 401,
+	'amount_min'        => 1,
+	'amount_max'        => 10000000,
+	'amount_field'      => '',
+	'suggested_amounts' => [ 300, 500, 1000 ],
+	'currency'          => 'TWD',
+	'payment_methods'   => [ 'CreditCard', 'LinePay' ],
+	'cc_installments'   => [ '0', '3', '6' ],
+	'simple_mode'       => true,
+	'button_text'       => '',
+] );
+
 $token = MXP_SLP_Security::generate_order_token();
 $body = MXP_SLP_Request_Builder::build_session_request(
-	5,
+	$form_id,
 	[
 		'your-name'  => '王小明',
 		'your-email' => 'buyer@example.com',
@@ -26,6 +43,12 @@ $body = MXP_SLP_Request_Builder::build_session_request(
 	$token,
 	home_url( '/slp-payment-return/?token=' . $token )
 );
+
+if ( false === $original_settings || '' === $original_settings ) {
+	delete_post_meta( $form_id, '_slp_payment_settings' );
+} else {
+	update_post_meta( $form_id, '_slp_payment_settings', $original_settings );
+}
 
 $session = $api->create_session( $body );
 if ( ! is_array( $session ) || empty( $session['sessionId'] ) || empty( $session['sessionUrl'] ) ) {

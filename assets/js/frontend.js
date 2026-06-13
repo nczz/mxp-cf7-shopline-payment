@@ -5,13 +5,19 @@
 
 	// 初始化
 	document.addEventListener('DOMContentLoaded', function() {
-		// 隱藏原生 submit
 		document.querySelectorAll('.wpcf7-shopline-payment').forEach(function(widget) {
 			var form = widget.closest('.wpcf7-form');
 			if (!form) return;
-			form.querySelectorAll('.wpcf7-submit:not(.slp-submit-btn)').forEach(function(btn) {
-				btn.style.display = 'none';
-			});
+			var isUserInput = widget.dataset.amountMode === 'user_input';
+			if (isUserInput) {
+				// user_input 模式：預設顯示原生 submit，隱藏付款按鈕
+				widget.querySelector('.slp-submit-btn').style.display = 'none';
+			} else {
+				// 其他模式：隱藏原生 submit
+				form.querySelectorAll('.wpcf7-submit:not(.slp-submit-btn)').forEach(function(btn) {
+					btn.style.display = 'none';
+				});
+			}
 			initAmountWidget(widget);
 		});
 
@@ -79,9 +85,13 @@
 		var input = widget.querySelector('input[name="slp_amount"]');
 		if (!input) return;
 
+		var form = widget.closest('.wpcf7-form');
 		var display = widget.querySelector('.slp-amount-display');
 		var min = parseInt(widget.dataset.amountMin, 10) || 1;
 		var max = parseInt(widget.dataset.amountMax, 10) || 10000000;
+		var isUserInput = widget.dataset.amountMode === 'user_input';
+		var slpBtn = widget.querySelector('.slp-submit-btn');
+		var nativeBtn = form ? form.querySelector('.wpcf7-submit:not(.slp-submit-btn)') : null;
 
 		function format(n) {
 			return 'NT$' + String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
@@ -102,6 +112,16 @@
 				button.classList.toggle('is-selected', selected);
 				button.setAttribute('aria-pressed', selected ? 'true' : 'false');
 			});
+			// user_input: 有金額顯示付款按鈕，無金額顯示原生 submit
+			if (isUserInput && slpBtn && nativeBtn) {
+				if (value > 0) {
+					slpBtn.style.display = '';
+					nativeBtn.style.display = 'none';
+				} else {
+					slpBtn.style.display = 'none';
+					nativeBtn.style.display = '';
+				}
+			}
 		}
 
 		widget.querySelectorAll('.slp-suggested-amount').forEach(function(button) {

@@ -96,11 +96,12 @@ final class MXP_SLP_Webhook {
 
 	private function route_event( string $type, array $event_data, array $full_payload ): void {
 		match ( $type ) {
-			'session.succeeded' => $this->handle_session_succeeded( $event_data ),
-			'session.expired'   => $this->handle_session_expired( $event_data ),
-			'trade.succeeded'   => $this->handle_trade_succeeded( $event_data ),
-			'trade.failed'      => $this->handle_trade_failed( $event_data ),
-			default             => $this->handle_unknown( $type ),
+			'session.succeeded'      => $this->handle_session_succeeded( $event_data ),
+			'session.expired'        => $this->handle_session_expired( $event_data ),
+			'trade.succeeded'        => $this->handle_trade_succeeded( $event_data ),
+			'trade.failed'           => $this->handle_trade_failed( $event_data ),
+			'trade.refund.succeeded' => $this->handle_refund_succeeded( $event_data ),
+			default                  => $this->handle_unknown( $type ),
 		};
 	}
 
@@ -183,6 +184,30 @@ final class MXP_SLP_Webhook {
 				update_post_meta( $order_id, '_slp_error_msg', $data['paymentMsg']['msg'] ?? '' );
 			}
 		}
+	}
+
+	private function handle_refund_succeeded( array $data ): void {
+		$trade_order_id = $data['tradeOrderId'] ?? '';
+		if ( ! $trade_order_id ) {
+			return;
+		}
+
+		$orders = get_posts( [
+			'post_type'   => 'slp_order',
+			'post_status' => 'any',
+			'meta_key'    => '_slp_trade_order_id',
+			'meta_value'  => $trade_order_id,
+			'numberposts' => 1,
+		] );
+
+		if ( empty( $orders ) ) {
+			return;
+		}
+
+		$order_id = $orders[0]->ID;
+		MXP_SLP_Order::update_status( $order_id, 'REFUNDED' );
+		update_post_meta( $order_id, '_slp_refund_order_id', $data['refundOrderId'] ?? '' );
+		update_post_meta( $order_id, '_slp_refund_amount', $data['amount']['value'] ?? '' );
 	}
 
 	private function handle_unknown( string $type ): void {

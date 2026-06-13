@@ -87,7 +87,7 @@ function mxp_slp_form_tag_handler( $tag ): string {
 	if ( 'user_input' === $settings['amount_mode'] ) {
 		$html .= '<div class="slp-custom-amount">';
 		$html .= '<label class="slp-custom-amount-label" for="slp-amount-' . esc_attr( $form_id ) . '">' . esc_html__( '付款金額', 'mxp-cf7-slp' ) . '</label>';
-		$html .= '<div class="slp-custom-amount-control"><span class="slp-currency-prefix">NT$</span><input id="slp-amount-' . esc_attr( $form_id ) . '" type="number" inputmode="numeric" pattern="[0-9]*" name="slp_amount" min="' . esc_attr( $settings['amount_min'] ) . '" max="' . esc_attr( $settings['amount_max'] ) . '" step="1" placeholder="' . esc_attr( number_format( $settings['amount_min'] ) ) . '" autocomplete="off" required></div>';
+		$html .= '<div class="slp-custom-amount-control"><span class="slp-currency-prefix">NT$</span><input id="slp-amount-' . esc_attr( $form_id ) . '" type="number" inputmode="numeric" pattern="[0-9]*" name="slp_amount" min="' . esc_attr( $settings['amount_min'] ) . '" max="' . esc_attr( $settings['amount_max'] ) . '" step="1" placeholder="' . esc_attr( number_format( $settings['amount_min'] ) ) . '" autocomplete="off"></div>';
 		if ( ! empty( $settings['suggested_amounts'] ) ) {
 			$html .= '<div class="slp-suggested-amounts" aria-label="' . esc_attr__( '建議金額', 'mxp-cf7-slp' ) . '">';
 			foreach ( $settings['suggested_amounts'] as $suggested_amount ) {

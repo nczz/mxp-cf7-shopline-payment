@@ -4,7 +4,7 @@ Tags: contact form 7, payment, shopline, taiwan, credit card, line pay
 Requires at least: 6.4
 Tested up to: 7.0
 Requires PHP: 8.0
-Stable tag: 1.1.3
+Stable tag: 1.1.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -56,6 +56,14 @@ MXP CF7 Shopline Payment 是台灣唯一的 CF7 在地金流外掛，支援：
 可以，在付款 Tab 中勾選需要的分期期數即可。
 
 == Changelog ==
+
+= 1.1.4 =
+* 修正正式環境（production）金鑰前綴錯誤導致連線測試失敗
+* 新增升級自動遷移機制，舊版使用者無需重新儲存設定
+* 修正 CF7 付款面板在正式環境顯示「請先設定 API 金鑰」的誤判
+* 修正隱藏金額欄位觸發 HTML5 validation 導致表單無法儲存
+* 修正新建 CF7 表單時付款設定未被儲存的問題
+* 更新外掛作者資訊
 
 = 1.1.3 =
 * 修正信用卡分期期數已儲存但後台 checkbox 未正確回填勾選的問題

@@ -23,6 +23,15 @@ function mxp_slp_handle_before_send_mail( $contact_form, &$abort, $submission ):
 
 	$posted_data = $submission->get_posted_data();
 	$amount_data = MXP_SLP_Request_Builder::resolve_amount( $posted_data, $settings );
+
+	// user_input 模式：金額為空或 0 時視為一般表單送出（不進付款流程）
+	if ( 'user_input' === $settings['amount_mode'] ) {
+		$raw = $posted_data['slp_amount'] ?? ( $posted_data['_slp_amount'] ?? '' );
+		if ( '' === trim( (string) $raw ) || 0 === absint( $raw ) ) {
+			return;
+		}
+	}
+
 	if ( $amount_data['error'] ) {
 		$abort = true;
 		$submission->set_status( 'validation_failed' );

@@ -26,6 +26,7 @@ final class MXP_SLP_Loader {
 			return;
 		}
 
+		$this->maybe_migrate_settings();
 		$this->load_textdomain();
 		$this->load_includes();
 
@@ -52,6 +53,44 @@ final class MXP_SLP_Loader {
 		}
 
 		return true;
+	}
+
+	/**
+	 * 舊版 bug 可能將 production 金鑰存為 production_* 而非 live_*，
+	 * 此方法在升級時自動遷移，使用者不需重新儲存。
+	 */
+	private function maybe_migrate_settings(): void {
+		$settings = get_option( 'mxp_slp_settings', [] );
+
+		if ( empty( $settings ) || ! empty( $settings['_migrated_live_keys'] ) ) {
+			return;
+		}
+
+		$migrated = false;
+		$map = [
+			'production_merchant_id' => 'live_merchant_id',
+			'production_api_key'     => 'live_api_key',
+			'production_sign_key'    => 'live_sign_key',
+			'production_client_key'  => 'live_client_key',
+		];
+
+		foreach ( $map as $old_key => $new_key ) {
+			if ( ! empty( $settings[ $old_key ] ) && empty( $settings[ $new_key ] ) ) {
+				$settings[ $new_key ] = $settings[ $old_key ];
+				$migrated = true;
+			}
+			unset( $settings[ $old_key ] );
+		}
+
+		$settings['_migrated_live_keys'] = true;
+		update_option( 'mxp_slp_settings', $settings );
+
+		if ( $migrated && is_admin() ) {
+			add_action( 'admin_notices', fn() => printf(
+				'<div class="notice notice-info is-dismissible"><p>%s</p></div>',
+				esc_html__( 'SHOPLINE Payments：已自動遷移正式環境金鑰設定。', 'mxp-cf7-slp' )
+			) );
+		}
 	}
 
 	private function load_textdomain(): void {

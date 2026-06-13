@@ -59,6 +59,7 @@ final class MXP_SLP_Settings {
 	public function render_page(): void {
 		$settings = get_option( 'mxp_slp_settings', [] );
 		$env = $settings['environment'] ?? 'sandbox';
+		$prefix = 'production' === $env ? 'live' : $env;
 		$webhook_url = rest_url( 'mxp-cf7-slp/v1/webhook' );
 		?>
 		<div class="wrap">
@@ -91,19 +92,19 @@ final class MXP_SLP_Settings {
 					</tr>
 					<tr>
 						<th>Merchant ID</th>
-						<td><input type="text" name="mxp_slp_settings[<?php echo esc_attr( $env ); ?>_merchant_id]" value="<?php echo esc_attr( $settings[ $env . '_merchant_id' ] ?? '' ); ?>" class="regular-text"></td>
+						<td><input type="text" name="mxp_slp_settings[<?php echo esc_attr( $prefix ); ?>_merchant_id]" value="<?php echo esc_attr( $settings[ $prefix . '_merchant_id' ] ?? '' ); ?>" class="regular-text"></td>
 					</tr>
 					<tr>
 						<th>API Key</th>
-						<td><input type="password" name="mxp_slp_settings[<?php echo esc_attr( $env ); ?>_api_key]" value="" class="regular-text" placeholder="<?php echo ! empty( $settings[ $env . '_api_key' ] ) ? '••••••（已設定）' : ''; ?>"></td>
+						<td><input type="password" name="mxp_slp_settings[<?php echo esc_attr( $prefix ); ?>_api_key]" value="" class="regular-text" placeholder="<?php echo ! empty( $settings[ $prefix . '_api_key' ] ) ? '••••••（已設定）' : ''; ?>"></td>
 					</tr>
 					<tr>
 						<th>Sign Key</th>
-						<td><input type="password" name="mxp_slp_settings[<?php echo esc_attr( $env ); ?>_sign_key]" value="" class="regular-text" placeholder="<?php echo ! empty( $settings[ $env . '_sign_key' ] ) ? '••••••（已設定）' : ''; ?>"></td>
+						<td><input type="password" name="mxp_slp_settings[<?php echo esc_attr( $prefix ); ?>_sign_key]" value="" class="regular-text" placeholder="<?php echo ! empty( $settings[ $prefix . '_sign_key' ] ) ? '••••••（已設定）' : ''; ?>"></td>
 					</tr>
 					<tr>
 						<th>Client Key <small style="color:#666;">(SDK)</small></th>
-						<td><input type="text" name="mxp_slp_settings[<?php echo esc_attr( $env ); ?>_client_key]" value="<?php echo esc_attr( $settings[ $env . '_client_key' ] ?? '' ); ?>" class="regular-text" placeholder="<?php esc_attr_e( '選填，內嵌式付款需要', 'mxp-cf7-slp' ); ?>"></td>
+						<td><input type="text" name="mxp_slp_settings[<?php echo esc_attr( $prefix ); ?>_client_key]" value="<?php echo esc_attr( $settings[ $prefix . '_client_key' ] ?? '' ); ?>" class="regular-text" placeholder="<?php esc_attr_e( '選填，內嵌式付款需要', 'mxp-cf7-slp' ); ?>"></td>
 					</tr>
 					<tr>
 						<th><?php esc_html_e( '連線測試', 'mxp-cf7-slp' ); ?></th>

@@ -26,7 +26,8 @@ final class MXP_SLP_Service extends WPCF7_Service {
 	public function is_active(): bool {
 		$settings = get_option( 'mxp_slp_settings', [] );
 		$env = $settings['environment'] ?? 'sandbox';
-		return ! empty( $settings[ $env . '_api_key' ] );
+		$prefix = 'production' === $env ? 'live' : $env;
+		return ! empty( $settings[ $prefix . '_api_key' ] );
 	}
 
 	public function get_categories(): array {

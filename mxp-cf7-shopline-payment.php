@@ -7,8 +7,8 @@
  * Requires at least: 6.4
  * Requires PHP: 8.0
  * Requires Plugins: contact-form-7
- * Author: Jeremie Chiang (MXP)
- * Author URI: https://mxp.tw
+ * Author: Chun
+ * Author URI: https://www.mxp.tw/contact
  * License: GPL v2 or later
  * License URI: https://www.gnu.org/licenses/gpl-2.0.html
  * Text Domain: mxp-cf7-slp

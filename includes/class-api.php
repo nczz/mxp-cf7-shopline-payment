@@ -22,6 +22,11 @@ final class MXP_SLP_API {
 		return get_option( 'mxp_slp_settings', [] );
 	}
 
+	private function get_prefix( array $settings ): string {
+		$env = $settings['environment'] ?? 'sandbox';
+		return 'production' === $env ? 'live' : $env;
+	}
+
 	private function get_base_url(): string {
 		$settings = $this->get_settings();
 		$env = $settings['environment'] ?? 'sandbox';
@@ -30,21 +35,21 @@ final class MXP_SLP_API {
 
 	private function get_merchant_id(): string {
 		$settings = $this->get_settings();
-		$env = $settings['environment'] ?? 'sandbox';
-		return $settings[ $env . '_merchant_id' ] ?? '';
+		$prefix = $this->get_prefix( $settings );
+		return $settings[ $prefix . '_merchant_id' ] ?? '';
 	}
 
 	private function get_api_key(): string {
 		$settings = $this->get_settings();
-		$env = $settings['environment'] ?? 'sandbox';
-		$encrypted = $settings[ $env . '_api_key' ] ?? '';
+		$prefix = $this->get_prefix( $settings );
+		$encrypted = $settings[ $prefix . '_api_key' ] ?? '';
 		return MXP_SLP_Security::decrypt( $encrypted );
 	}
 
 	public function get_sign_key(): string {
 		$settings = $this->get_settings();
-		$env = $settings['environment'] ?? 'sandbox';
-		$encrypted = $settings[ $env . '_sign_key' ] ?? '';
+		$prefix = $this->get_prefix( $settings );
+		$encrypted = $settings[ $prefix . '_sign_key' ] ?? '';
 		return MXP_SLP_Security::decrypt( $encrypted );
 	}
 
@@ -58,8 +63,8 @@ final class MXP_SLP_API {
 
 	public function get_client_key(): string {
 		$settings = $this->get_settings();
-		$env = $settings['environment'] ?? 'sandbox';
-		return $settings[ $env . '_client_key' ] ?? '';
+		$prefix = $this->get_prefix( $settings );
+		return $settings[ $prefix . '_client_key' ] ?? '';
 	}
 
 	public function get_environment(): string {

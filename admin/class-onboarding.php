@@ -17,8 +17,9 @@ final class MXP_SLP_Onboarding {
 
 		$settings = get_option( 'mxp_slp_settings', [] );
 		$env = $settings['environment'] ?? 'sandbox';
+		$prefix = 'production' === $env ? 'live' : $env;
 
-		if ( ! empty( $settings[ $env . '_api_key' ] ) ) {
+		if ( ! empty( $settings[ $prefix . '_api_key' ] ) ) {
 			return;
 		}
 

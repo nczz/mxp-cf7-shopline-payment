@@ -196,7 +196,7 @@ final class MXP_SLP_Payment_Panel {
 	}
 
 	public function save_settings( $contact_form, $data, $context ): void {
-		if ( 'save' !== $context ) {
+		if ( ! in_array( $context, [ 'save', 'create' ], true ) ) {
 			return;
 		}
 

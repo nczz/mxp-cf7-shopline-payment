@@ -85,7 +85,9 @@ final class MXP_SLP_Payment_Panel {
 		$suggested_amounts = implode( ', ', $settings['suggested_amounts'] );
 
 		$global = get_option( 'mxp_slp_settings', [] );
-		$has_key = ! empty( $global[ ( $global['environment'] ?? 'sandbox' ) . '_api_key' ] );
+		$env = $global['environment'] ?? 'sandbox';
+		$prefix = 'production' === $env ? 'live' : $env;
+		$has_key = ! empty( $global[ $prefix . '_api_key' ] );
 		?>
 		<h2><?php esc_html_e( '付款設定', 'mxp-cf7-slp' ); ?></h2>
 

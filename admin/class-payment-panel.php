@@ -121,14 +121,14 @@ final class MXP_SLP_Payment_Panel {
 				</tr>
 				<tr class="slp-amount-fixed-row">
 					<th><?php esc_html_e( '固定金額（TWD）', 'mxp-cf7-slp' ); ?></th>
-					<td><input type="number" name="slp_payment[amount]" value="<?php echo esc_attr( $settings['amount'] ); ?>" min="1" step="1" class="small-text"> <span class="description"><?php esc_html_e( '元', 'mxp-cf7-slp' ); ?></span></td>
+					<td><input type="number" name="slp_payment[amount]" value="<?php echo esc_attr( $settings['amount'] ); ?>" min="0" step="1" class="small-text"> <span class="description"><?php esc_html_e( '元', 'mxp-cf7-slp' ); ?></span></td>
 				</tr>
 				<tr class="slp-amount-range-row">
 					<th><?php esc_html_e( '可付款金額範圍', 'mxp-cf7-slp' ); ?></th>
 					<td>
-						<input type="number" name="slp_payment[amount_min]" value="<?php echo esc_attr( $settings['amount_min'] ); ?>" min="1" step="1" class="small-text" aria-label="<?php esc_attr_e( '最低付款金額', 'mxp-cf7-slp' ); ?>">
+						<input type="number" name="slp_payment[amount_min]" value="<?php echo esc_attr( $settings['amount_min'] ); ?>" min="0" step="1" class="small-text" aria-label="<?php esc_attr_e( '最低付款金額', 'mxp-cf7-slp' ); ?>">
 						<span class="description"><?php esc_html_e( '元 至', 'mxp-cf7-slp' ); ?></span>
-						<input type="number" name="slp_payment[amount_max]" value="<?php echo esc_attr( $settings['amount_max'] ); ?>" min="1" step="1" class="small-text" aria-label="<?php esc_attr_e( '最高付款金額', 'mxp-cf7-slp' ); ?>">
+						<input type="number" name="slp_payment[amount_max]" value="<?php echo esc_attr( $settings['amount_max'] ); ?>" min="0" step="1" class="small-text" aria-label="<?php esc_attr_e( '最高付款金額', 'mxp-cf7-slp' ); ?>">
 						<span class="description"><?php esc_html_e( '元', 'mxp-cf7-slp' ); ?></span>
 					</td>
 				</tr>

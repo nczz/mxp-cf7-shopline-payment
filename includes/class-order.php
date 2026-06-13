@@ -335,8 +335,9 @@ final class MXP_SLP_Order {
 	public static function update_status( int $order_id, string $new_status ): bool {
 		$current = get_post_meta( $order_id, '_slp_status', true );
 		$allowed = [
-			'CREATED' => [ 'PENDING', 'SUCCEEDED', 'EXPIRED', 'FAILED' ],
-			'PENDING' => [ 'SUCCEEDED', 'EXPIRED', 'FAILED' ],
+			'CREATED'   => [ 'PENDING', 'SUCCEEDED', 'EXPIRED', 'FAILED' ],
+			'PENDING'   => [ 'SUCCEEDED', 'EXPIRED', 'FAILED' ],
+			'SUCCEEDED' => [ 'REFUNDED' ],
 		];
 
 		if ( isset( $allowed[ $current ] ) && in_array( $new_status, $allowed[ $current ], true ) ) {
